@@ -8,6 +8,9 @@ use apollo_router::services::supergraph;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tower::BoxError;
+use tower::ServiceBuilder;
+use tower::ServiceExt;
+use http::Uri;
 
 #[derive(Debug)]
 struct HelloWorld {
@@ -67,7 +70,21 @@ impl Plugin for HelloWorld {
 
     // Delete this function if you are not customizing it.
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
-        service
+        ServiceBuilder::new()
+        .map_request(|mut request: subgraph::Request| {
+            println!("{}", request.subgraph_request.uri());
+
+            // logic for changing subgraphs
+            let ru = request.subgraph_request.uri_mut();
+            *ru = "https://google.com/".parse::<Uri>().unwrap();
+
+            println!("{}", request.subgraph_request.uri());
+
+
+            return request;
+        })
+        .service(service)
+        .boxed()
     }
 }
 
