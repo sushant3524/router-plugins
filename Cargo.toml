@@ -26,6 +26,14 @@ tokio = { version = "1.17.0", features = ["full"] }
 tower = { version = "0.4.12", features = ["full"] }
 tracing = "0.1.37"
 http = "0.2.12"
+cached  = { version = "0.51.3", features = ["async"] }
+ferris-says = "0.3.1"
+mongodb = "2.8.2"
+
+[alias]
+xtask = "run --package xtask --"
+router = "run --package xtask -- router"
+
 
 # this makes build scripts and proc macros faster to compile
 [profile.dev.build-override]

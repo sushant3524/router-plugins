@@ -5,12 +5,15 @@ use apollo_router::services::execution;
 use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
+use futures::executor;
+use http::Uri;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tower::BoxError;
 use tower::ServiceBuilder;
 use tower::ServiceExt;
-use http::Uri;
+
+use crate::plugins::mongodb::get_cached_config;
 
 #[derive(Debug)]
 struct HelloWorld {
@@ -71,20 +74,23 @@ impl Plugin for HelloWorld {
     // Delete this function if you are not customizing it.
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
         ServiceBuilder::new()
-        .map_request(|mut request: subgraph::Request| {
-            println!("{}", request.subgraph_request.uri());
+            .map_request(|mut request: subgraph::Request| {
+                println!("{}", request.subgraph_request.uri());
 
-            // logic for changing subgraphs
-            let ru = request.subgraph_request.uri_mut();
-            *ru = "https://google.com/".parse::<Uri>().unwrap();
+                // logic for changing subgraphs
+                let ru = request.subgraph_request.uri_mut();
 
-            println!("{}", request.subgraph_request.uri());
+                // let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
 
+                // Call the asynchronous connect method using the runtime.
+                let config = executor::block_on(get_cached_config("1".to_string())).unwrap();
+                *ru = config.partner_graph_url.parse::<Uri>().unwrap();
 
-            return request;
-        })
-        .service(service)
-        .boxed()
+                println!("{}", request.subgraph_request.uri());
+                return request;
+            })
+            .service(service)
+            .boxed()
     }
 }
 
