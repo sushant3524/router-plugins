@@ -96,7 +96,7 @@ impl Plugin for HelloWorld {
 
 // This macro allows us to use it in our plugin registry!
 // register_plugin takes a group name, and a plugin name.
-register_plugin!("starstruck", "hello_world", HelloWorld);
+register_plugin!("starstruck", "subgraph_tier", HelloWorld);
 
 #[cfg(test)]
 mod tests {
@@ -111,7 +111,7 @@ mod tests {
         let test_harness = TestHarness::builder()
             .configuration_json(serde_json::json!({
                 "plugins": {
-                    "starstruck.hello_world": {
+                    "starstruck.subgraph_tier": {
                         "message" : "Starting my plugin"
                     }
                 }

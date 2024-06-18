@@ -1,9 +1,12 @@
-# Apollo Router project
+# Apollo Router with Plugins
 
-This generated project is set up to create a custom Apollo Router binary that may include plugins that you have written.
+This generated project is set up to create a custom Apollo Router binary that includes plugins that you have written.
 
 > Note: The Apollo Router is made available under the Elastic License v2.0 (ELv2).
 > Read [our licensing page](https://www.apollographql.com/docs/resources/elastic-license-v2-faq/) for more details.
+
+## Included Plugins
+- Subgraph tiering support 
 
 # Compile the router
 
