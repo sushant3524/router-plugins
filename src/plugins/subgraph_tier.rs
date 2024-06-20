@@ -16,7 +16,7 @@ use tower::ServiceExt;
 use crate::plugins::mongodb::get_cached_config;
 
 #[derive(Debug)]
-struct HelloWorld {
+struct SubgraphTiering {
     #[allow(dead_code)]
     configuration: Conf,
 }
@@ -30,12 +30,12 @@ struct Conf {
 }
 // This is a bare bones plugin that can be duplicated when creating your own.
 #[async_trait::async_trait]
-impl Plugin for HelloWorld {
+impl Plugin for SubgraphTiering {
     type Config = Conf;
 
     async fn new(init: PluginInit<Self::Config>) -> Result<Self, BoxError> {
         tracing::info!("{}", init.config.message);
-        Ok(HelloWorld {
+        Ok(SubgraphTiering {
             configuration: init.config,
         })
     }
@@ -96,7 +96,7 @@ impl Plugin for HelloWorld {
 
 // This macro allows us to use it in our plugin registry!
 // register_plugin takes a group name, and a plugin name.
-register_plugin!("starstruck", "subgraph_tier", HelloWorld);
+register_plugin!("starstruck", "subgraph_tier", SubgraphTiering);
 
 #[cfg(test)]
 mod tests {
