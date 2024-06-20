@@ -73,18 +73,19 @@ impl Plugin for SubgraphTiering {
 
     // Delete this function if you are not customizing it.
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
+        let service_name = _name.to_string();
         ServiceBuilder::new()
-            .map_request(|mut request: subgraph::Request| {
+            .map_request(move |mut request: subgraph::Request| {
                 println!("{}", request.subgraph_request.uri());
 
                 // logic for changing subgraphs
                 let ru = request.subgraph_request.uri_mut();
 
-                // let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
-
                 // Call the asynchronous connect method using the runtime.
-                let config = executor::block_on(get_cached_config("1".to_string())).unwrap();
-                *ru = config.partner_graph_url.parse::<Uri>().unwrap();
+                let config =
+                    executor::block_on(get_cached_config("1".to_string(), service_name.clone()))
+                        .unwrap();
+                *ru = config.service_uri.parse::<Uri>().unwrap();
 
                 println!("{}", request.subgraph_request.uri());
                 return request;

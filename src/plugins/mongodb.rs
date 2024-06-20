@@ -8,7 +8,8 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub partner_id: String,
-    pub partner_graph_url: String,
+    pub service_uri: String,
+    pub service_name: String,
 }
 
 // Initialize MongoDB connection
@@ -20,7 +21,10 @@ async fn init_mongo() -> mongodb::error::Result<Client> {
 }
 
 // Function to get the config from MongoDB
-async fn get_config_from_db(partner_id: String) -> mongodb::error::Result<Config> {
+async fn get_config_from_db(
+    partner_id: String,
+    service_name: String,
+) -> mongodb::error::Result<Config> {
     let client = init_mongo().await?;
     let database = client.database("partner");
     let collection = database.collection::<Config>("config");
@@ -28,7 +32,8 @@ async fn get_config_from_db(partner_id: String) -> mongodb::error::Result<Config
     // Query the database for the config document
     // Assuming there's only one config document
     let filter = doc! {
-        "partner_id": partner_id
+        "partner_id": partner_id,
+        "service_name": service_name
     };
 
     let config = collection.find_one(filter, None).await?.unwrap();
@@ -41,6 +46,6 @@ async fn get_config_from_db(partner_id: String) -> mongodb::error::Result<Config
     create = "{ SizedCache::with_size(100) }",
     convert = r#"{ format!("{}", partner_id) }"#
 )]
-pub async fn get_cached_config(partner_id: String) -> Result<Config, Error> {
-    get_config_from_db(partner_id).await
+pub async fn get_cached_config(partner_id: String, service_name: String) -> Result<Config, Error> {
+    get_config_from_db(partner_id, service_name).await
 }
