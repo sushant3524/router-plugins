@@ -1,7 +1,7 @@
 use cached::proc_macro::cached;
 use cached::SizedCache;
-use mongodb::error::Error;
-use mongodb::{bson::doc, options::ClientOptions, Client};
+use mongodb::sync::Client;
+use mongodb::{bson::doc, options::ClientOptions};
 use serde::Deserialize;
 
 // Define a struct to hold your config data
@@ -12,21 +12,13 @@ pub struct Config {
     pub service_name: String,
 }
 
-// Initialize MongoDB connection
-async fn init_mongo() -> mongodb::error::Result<Client> {
-    let mongo_uri = "mongodb://localhost:27017/";
-    let client_options = ClientOptions::parse(mongo_uri).await?;
-    let client = Client::with_options(client_options)?;
-    Ok(client)
-}
-
 // Function to get the config from MongoDB
-async fn get_config_from_db(
+fn get_config_from_db(
     partner_id: String,
     service_name: String,
-) -> mongodb::error::Result<Config> {
-    let client = init_mongo().await?;
-    let database = client.database("partner");
+) -> mongodb::error::Result<Option<Config>> {
+    let client = Client::with_uri_str("mongodb://localhost:27017");
+    let database = client?.database("partner");
     let collection = database.collection::<Config>("config");
 
     // Query the database for the config document
@@ -36,16 +28,21 @@ async fn get_config_from_db(
         "service_name": service_name
     };
 
-    let config = collection.find_one(filter, None).await?.unwrap();
-    Ok(config)
+    collection.find_one(filter, None)
 }
 
 // Cached function to get the config
 #[cached(
-    ty = "SizedCache<String, Result<Config, Error>>",
+    ty = "SizedCache<String, Option<Config>>",
     create = "{ SizedCache::with_size(100) }",
-    convert = r#"{ format!("{}", partner_id) }"#
+    convert = r#"{ format!("{}-#-{}", partner_id, service_name) }"#
 )]
-pub async fn get_cached_config(partner_id: String, service_name: String) -> Result<Config, Error> {
-    get_config_from_db(partner_id, service_name).await
+pub fn get_cached_config(partner_id: String, service_name: String) -> Option<Config> {
+    match get_config_from_db(partner_id, service_name) {
+        Ok(conf) => conf,
+        Err(error) => {
+            println!("Error in Mongo: {}", error.to_string());
+            None
+        }
+    }
 }

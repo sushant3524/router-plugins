@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use apollo_router::plugin::Plugin;
 use apollo_router::plugin::PluginInit;
 use apollo_router::register_plugin;
@@ -17,8 +19,13 @@ use crate::plugins::mongodb::get_cached_config;
 
 #[derive(Debug)]
 struct SubgraphTiering {
-    #[allow(dead_code)]
     configuration: Conf,
+    default_service_uris: HashMap<String, Uri>,
+}
+#[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
+struct ServiceDefaults {
+    name: String,
+    default_uri: String,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -27,16 +34,26 @@ struct Conf {
     // Always put some sort of config here, even if it is just a bool to say that the plugin is enabled,
     // otherwise the yaml to enable the plugin will be confusing.
     message: String,
+    service: Vec<ServiceDefaults>,
 }
-// This is a bare bones plugin that can be duplicated when creating your own.
+
 #[async_trait::async_trait]
 impl Plugin for SubgraphTiering {
     type Config = Conf;
 
     async fn new(init: PluginInit<Self::Config>) -> Result<Self, BoxError> {
         tracing::info!("{}", init.config.message);
+        let mut hash_map: HashMap<String, Uri> = HashMap::new();
+        for s in init.config.service.iter().cloned() {
+            hash_map.insert(s.name, s.default_uri.parse::<Uri>().unwrap());
+        }
+        for s in init.config.service.iter().cloned() {
+            tracing::info!("{}", s.default_uri);
+        }
+
         Ok(SubgraphTiering {
             configuration: init.config,
+            default_service_uris: hash_map,
         })
     }
 
@@ -74,20 +91,25 @@ impl Plugin for SubgraphTiering {
     // Delete this function if you are not customizing it.
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
         let service_name = _name.to_string();
+        let default_uri = self.default_service_uris.get(_name);
+        let uri: Uri;
+
+        match default_uri {
+            Some(value) => uri = value.clone(),
+            None => panic!("default uri for {} not provided", service_name)
+        }
+
         ServiceBuilder::new()
             .map_request(move |mut request: subgraph::Request| {
-                println!("{}", request.subgraph_request.uri());
-
-                // logic for changing subgraphs
                 let ru = request.subgraph_request.uri_mut();
-
-                // Call the asynchronous connect method using the runtime.
                 let config =
-                    executor::block_on(get_cached_config("1".to_string(), service_name.clone()))
-                        .unwrap();
-                *ru = config.service_uri.parse::<Uri>().unwrap();
+                    get_cached_config("1".to_string(), service_name.clone());
 
-                println!("{}", request.subgraph_request.uri());
+                match config {
+                    Some(conf) => *ru = conf.service_uri.parse::<Uri>().unwrap(),
+                    None => *ru = uri.clone(),
+                }
+
                 return request;
             })
             .service(service)
