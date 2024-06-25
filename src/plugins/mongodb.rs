@@ -1,7 +1,7 @@
 use cached::proc_macro::cached;
 use cached::SizedCache;
 use mongodb::sync::Client;
-use mongodb::{bson::doc, options::ClientOptions};
+use mongodb::bson::doc;
 use serde::Deserialize;
 
 // Define a struct to hold your config data

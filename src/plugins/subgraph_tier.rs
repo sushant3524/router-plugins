@@ -95,7 +95,7 @@ impl Plugin for SubgraphTiering {
 
         match default_uri {
             Some(value) => uri = value.clone(),
-            None => panic!("default uri for {} not provided", service_name)
+            None => panic!("default uri for {} not provided for", service_name)
         }
 
         ServiceBuilder::new()

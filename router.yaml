@@ -2,9 +2,11 @@ plugins:
   starstruck.subgraph_tier:
     message: "starting subgraph tiering"
     service:
-      - name: product
-        default_uri: http://localhost:5001/graphql
-      - name: review
-        default_uri: http://localhost:5002/graphql
-      - name: user
-        default_uri: http://localhost:5003/graphql
+      - name: webui
+        default_uri: https://space-qa6-app-platform.sprinklr.com/ui/graphql
+
+headers:
+  all:
+    request:
+      - propagate:
+          matching: ^.*
