@@ -7,7 +7,6 @@ use apollo_router::services::execution;
 use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
-use futures::executor;
 use http::Uri;
 use schemars::JsonSchema;
 use serde::Deserialize;
