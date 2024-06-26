@@ -1,5 +1,8 @@
 use std::collections::HashMap;
+use std::ops::ControlFlow;
 
+use apollo_router::graphql;
+use apollo_router::layers::ServiceBuilderExt;
 use apollo_router::plugin::Plugin;
 use apollo_router::plugin::PluginInit;
 use apollo_router::register_plugin;
@@ -7,6 +10,8 @@ use apollo_router::services::execution;
 use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
+use apollo_router::Context;
+use http::StatusCode;
 use http::Uri;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -59,15 +64,10 @@ impl Plugin for SubgraphTiering {
 
     // Delete this function if you are not customizing it.
     fn router_service(&self, service: router::BoxService) -> router::BoxService {
-        // Always use service builder to compose your plugins.
-        // It provides off the shelf building blocks for your plugin.
-        //
-        // ServiceBuilder::new()
-        //             .service(service)
-        //             .boxed()
-
-        // Returning the original service means that we didn't add any extra functionality at this point in the lifecycle.
-        service
+        ServiceBuilder::new()
+            .checkpoint(move |request: router::Request| Ok(cache_control(request)))
+            .service(service)
+            .boxed()
     }
 
     // Delete this function if you are not customizing it.
@@ -101,7 +101,7 @@ impl Plugin for SubgraphTiering {
 
         ServiceBuilder::new()
             .map_request(move |mut request: subgraph::Request| {
-                let partner_id_header = request.subgraph_request.headers_mut().get("PARTNER-ID");
+                let partner_id_header = request.subgraph_request.headers().get("PARTNER-ID");
                 let partner_id = match partner_id_header {
                     Some(id) => {
                         match str::from_utf8(id.as_bytes()) {
@@ -139,6 +139,45 @@ impl Plugin for SubgraphTiering {
 // This macro allows us to use it in our plugin registry!
 // register_plugin takes a group name, and a plugin name.
 register_plugin!("starstruck", "subgraph_tier", SubgraphTiering);
+
+fn cache_control(request: router::Request) -> ControlFlow<router::Response, router::Request> {
+    // We are going to do a lot of similar checking so let's define a local function
+    // to help reduce repetition
+    fn cancel_message(
+        context: Context,
+        error_message: String,
+        status: StatusCode,
+    ) -> ControlFlow<router::Response, router::Request> {
+        let response = router::Response::builder()
+            .error(
+                graphql::Error::builder()
+                    .message(error_message)
+                    .extension_code("CACHE") // TODO: add key to constants
+                    .build(),
+            )
+            .status_code(status)
+            .context(context)
+            .build()
+            .unwrap();
+        ControlFlow::Break(response)
+    }
+
+    let clear_cache_header = request.router_request.headers().get("CLEAR-CACHE"); // TODO: add the key to some constant
+    let clear_cache = match clear_cache_header {
+        Some(_) => true,
+        None => false,
+    };
+
+    if !clear_cache {
+        return ControlFlow::Continue(request);
+    } else {
+        cancel_message(
+            request.context,
+            "cleared cache".to_string(),
+            StatusCode::ACCEPTED,
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {
