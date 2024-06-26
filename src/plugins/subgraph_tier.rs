@@ -7,10 +7,10 @@ use apollo_router::services::execution;
 use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
-use std::str;
 use http::Uri;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use std::str;
 use tower::BoxError;
 use tower::ServiceBuilder;
 use tower::ServiceExt;
@@ -96,7 +96,7 @@ impl Plugin for SubgraphTiering {
 
         match default_uri {
             Some(value) => uri = value.clone(),
-            None => panic!("default uri for {} not provided for", service_name)
+            None => panic!("ERROR: default uri for {} not provided for", service_name), // TODO: add proper logging
         }
 
         ServiceBuilder::new()
@@ -107,21 +107,25 @@ impl Plugin for SubgraphTiering {
                         match str::from_utf8(id.as_bytes()) {
                             Ok(value) => value,
                             Err(err) => {
-                                println!("WARN: {}", err);
-                                "1"
+                                println!("WARN: {}", err); // TODO: add proper logging
+                                "1" // TODO: get this value from config
                             }
                         }
-                    },
-                    None => "1" 
+                    }
+                    None => "1", // TODO: get this value from config
                 };
                 let partner_id = partner_id.to_string();
 
                 let ru = request.subgraph_request.uri_mut();
-                let config =
-                    get_cached_config(partner_id, service_name.clone());
+                let config = get_cached_config(partner_id, service_name.clone());
 
                 match config {
-                    Some(conf) => *ru = conf.service_uri.parse::<Uri>().unwrap(),
+                    Some(conf) => {
+                        *ru = match conf.service_uri.parse::<Uri>() {
+                            Ok(uri_from_config) => uri_from_config,
+                            Err(err) => uri.clone(),
+                        }
+                    }
                     None => *ru = uri.clone(),
                 }
 
