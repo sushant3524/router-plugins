@@ -4,6 +4,14 @@ plugins:
     service:
       - name: webui
         default_uri: https://space-qa6-app-platform.sprinklr.com/ui/graphql
+      - name: accounts
+        default_uri: https://accounts.demo.starstuff.dev/
+      - name: inventory
+        default_uri: https://inventory.demo.starstuff.dev/
+      - name: products
+        default_uri: https://products.demo.starstuff.dev/
+      - name: reviews
+        default_uri: https://products.demo.starstuff.dev/
 
 headers:
   all:

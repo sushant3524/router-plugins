@@ -11,6 +11,7 @@ use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
 use apollo_router::Context;
+use cached::Cached;
 use http::StatusCode;
 use http::Uri;
 use schemars::JsonSchema;
@@ -21,6 +22,7 @@ use tower::ServiceBuilder;
 use tower::ServiceExt;
 
 use crate::plugins::mongodb::get_cached_config;
+use crate::plugins::mongodb::CONFIG_CACHE;
 
 #[derive(Debug)]
 struct SubgraphTiering {
@@ -88,7 +90,10 @@ impl Plugin for SubgraphTiering {
         service
     }
 
-    // Delete this function if you are not customizing it.
+    // Note that this function panics if no default value for a subgraph is provided
+    // This is not a good behavior to start out ... but I have added this so that
+    // Config files are for this are not forgotten or misspelt
+    // You can get default value from `enum join__Graph` in your supergraph 
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
         let service_name = _name.to_string();
         let default_uri = self.default_service_uris.get(_name);
@@ -123,7 +128,7 @@ impl Plugin for SubgraphTiering {
                     Some(conf) => {
                         *ru = match conf.service_uri.parse::<Uri>() {
                             Ok(uri_from_config) => uri_from_config,
-                            Err(err) => uri.clone(),
+                            Err(_) => uri.clone(),
                         }
                     }
                     None => *ru = uri.clone(),
@@ -171,6 +176,9 @@ fn cache_control(request: router::Request) -> ControlFlow<router::Response, rout
     if !clear_cache {
         return ControlFlow::Continue(request);
     } else {
+        let mut cache = CONFIG_CACHE.lock().unwrap();
+        cache.cache_clear();
+
         cancel_message(
             request.context,
             "cleared cache".to_string(),

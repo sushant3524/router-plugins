@@ -8,6 +8,14 @@ This generated project is set up to create a custom Apollo Router binary that in
 ## Included Plugins
 - Subgraph tiering support 
 
+## Understand what a macro does
+For example to understand `cached` macro was doing
+```bash
+rustup default nightly
+cargo rustc --profile=check -- -Zunpretty=expanded > file.rs
+```
+and check the code output in `file.rs`
+
 # Compile the router
 
 To create a debug build use the following command.
