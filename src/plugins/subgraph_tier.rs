@@ -7,6 +7,7 @@ use apollo_router::services::execution;
 use apollo_router::services::router;
 use apollo_router::services::subgraph;
 use apollo_router::services::supergraph;
+use std::str;
 use http::Uri;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -100,9 +101,24 @@ impl Plugin for SubgraphTiering {
 
         ServiceBuilder::new()
             .map_request(move |mut request: subgraph::Request| {
+                let partner_id_header = request.subgraph_request.headers_mut().get("PARTNER-ID");
+                let partner_id = match partner_id_header {
+                    Some(id) => {
+                        match str::from_utf8(id.as_bytes()) {
+                            Ok(value) => value,
+                            Err(err) => {
+                                println!("WARN: {}", err);
+                                "1"
+                            }
+                        }
+                    },
+                    None => "1" 
+                };
+                let partner_id = partner_id.to_string();
+
                 let ru = request.subgraph_request.uri_mut();
                 let config =
-                    get_cached_config("1".to_string(), service_name.clone());
+                    get_cached_config(partner_id, service_name.clone());
 
                 match config {
                     Some(conf) => *ru = conf.service_uri.parse::<Uri>().unwrap(),
