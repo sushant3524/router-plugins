@@ -5905,6 +5905,7 @@ dependencies = [
  "futures",
  "http 0.2.12",
  "mongodb",
+ "once_cell",
  "schemars",
  "serde",
  "serde_json",

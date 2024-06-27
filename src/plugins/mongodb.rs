@@ -1,12 +1,33 @@
 use cached::Cached;
 use cached::SizedCache;
 use mongodb::bson::doc;
+use mongodb::options::ClientOptions;
 use mongodb::sync::Client;
 use serde::Deserialize;
 
-pub static CONFIG_CACHE: ::cached::once_cell::sync::Lazy<
-    std::sync::Mutex<SizedCache<String, Config>>,
-> = ::cached::once_cell::sync::Lazy::new(|| std::sync::Mutex::new(SizedCache::with_size(100)));
+pub static CONFIG_CACHE: once_cell::sync::Lazy<std::sync::Mutex<SizedCache<String, Config>>> =
+    once_cell::sync::Lazy::new(|| {
+        let cache_size = match std::env::var("DEFAULT_URI_CACHE_SIZE")
+            .expect("Missing URI_CACHE_SIZE environment variable")
+            .parse::<usize>()
+        {
+            Ok(value) => value,
+            Err(err) => panic!("Could not create cache because {err}"),
+        };
+        std::sync::Mutex::new(SizedCache::with_size(cache_size))
+    });
+
+static MONGO_CLIENT: once_cell::sync::Lazy<mongodb::sync::Client> =
+    once_cell::sync::Lazy::new(|| {
+        let mongo_url =
+            std::env::var("MONGODB_URI").expect("Missing MONGO_URL environment variable");
+        let client_options = ClientOptions::parse(&mongo_url)
+            .expect("Client options provided could not be parsed properly");
+        match Client::with_options(client_options) {
+            Ok(client) => client,
+            Err(err) => panic!("Could not create a Mongo Client as {err}"),
+        }
+    });
 
 // Define a struct to hold your config data
 #[derive(Deserialize, Clone)]
@@ -21,8 +42,7 @@ fn get_config_from_db(
     partner_id: String,
     service_name: String,
 ) -> mongodb::error::Result<Option<Config>> {
-    let client = Client::with_uri_str("mongodb://localhost:27017");
-    let database = client?.database("partner");
+    let database = MONGO_CLIENT.database("partner");
     let collection = database.collection::<Config>("config");
 
     // Query the database for the config document
@@ -41,15 +61,21 @@ fn get_config_from_db(
 // but should encourage storing tier-config for all partners to the database
 pub fn get_cached_config(partner_id: String, service_name: String) -> Option<Config> {
     let key = format!("{0}-#-{1}", partner_id, service_name);
-    let mut cache = CONFIG_CACHE.lock().unwrap();
-    if let Some(result) = cache.cache_get(&key) {
-        return Some(result.to_owned());
+
+    {
+        let mut cache = CONFIG_CACHE.lock().unwrap();
+        if let Some(result) = cache.cache_get(&key) {
+            return Some(result.to_owned());
+        }
     }
 
     match get_config_from_db(partner_id, service_name) {
         Ok(result) => match result {
             Some(conf) => {
-                cache.cache_set(key, conf.clone());
+                {
+                    let mut cache = CONFIG_CACHE.lock().unwrap();
+                    cache.cache_set(key, conf.clone());
+                }
                 Some(conf)
             }
             None => None,

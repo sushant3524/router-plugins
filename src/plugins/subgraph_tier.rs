@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ops::ControlFlow;
 
@@ -26,8 +27,9 @@ use crate::plugins::mongodb::CONFIG_CACHE;
 
 #[derive(Debug)]
 struct SubgraphTiering {
-    configuration: Conf,
     default_service_uris: HashMap<String, Uri>,
+    default_partner_id: String,
+    cache_header_key: String,
 }
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 struct ServiceDefaults {
@@ -41,7 +43,9 @@ struct Conf {
     // Always put some sort of config here, even if it is just a bool to say that the plugin is enabled,
     // otherwise the yaml to enable the plugin will be confusing.
     message: String,
-    service: Vec<ServiceDefaults>,
+    services: Vec<ServiceDefaults>,
+    default_partner_id: String,
+    cache_header_key: String,
 }
 
 #[async_trait::async_trait]
@@ -49,25 +53,29 @@ impl Plugin for SubgraphTiering {
     type Config = Conf;
 
     async fn new(init: PluginInit<Self::Config>) -> Result<Self, BoxError> {
+        // print message on plugin startup
         tracing::info!("{}", init.config.message);
+
+        // create a map of service names (for different subgraphs) and default urls
         let mut hash_map: HashMap<String, Uri> = HashMap::new();
-        for s in init.config.service.iter().cloned() {
+        for s in init.config.services.iter().cloned() {
             hash_map.insert(s.name, s.default_uri.parse::<Uri>().unwrap());
-        }
-        for s in init.config.service.iter().cloned() {
-            tracing::info!("{}", s.default_uri);
         }
 
         Ok(SubgraphTiering {
-            configuration: init.config,
             default_service_uris: hash_map,
+            default_partner_id: init.config.default_partner_id,
+            cache_header_key: init.config.cache_header_key,
         })
     }
 
     // Delete this function if you are not customizing it.
     fn router_service(&self, service: router::BoxService) -> router::BoxService {
+        let cache_header_key: String = self.cache_header_key.clone();
         ServiceBuilder::new()
-            .checkpoint(move |request: router::Request| Ok(cache_control(request)))
+            .checkpoint(move |request: router::Request| {
+                Ok(cache_control(request, cache_header_key.borrow()))
+            })
             .service(service)
             .boxed()
     }
@@ -93,16 +101,15 @@ impl Plugin for SubgraphTiering {
     // Note that this function panics if no default value for a subgraph is provided
     // This is not a good behavior to start out ... but I have added this so that
     // Config files are for this are not forgotten or misspelt
-    // You can get default value from `enum join__Graph` in your supergraph 
+    // You can get default value from `enum join__Graph` in your supergraph
     fn subgraph_service(&self, _name: &str, service: subgraph::BoxService) -> subgraph::BoxService {
         let service_name = _name.to_string();
         let default_uri = self.default_service_uris.get(_name);
-        let uri: Uri;
-
-        match default_uri {
-            Some(value) => uri = value.clone(),
+        let default_partner_id = self.default_partner_id.clone();
+        let uri: Uri = match default_uri {
+            Some(value) => value.clone(),
             None => panic!("ERROR: default uri for {} not provided for", service_name), // TODO: add proper logging
-        }
+        };
 
         ServiceBuilder::new()
             .map_request(move |mut request: subgraph::Request| {
@@ -113,11 +120,11 @@ impl Plugin for SubgraphTiering {
                             Ok(value) => value,
                             Err(err) => {
                                 println!("WARN: {}", err); // TODO: add proper logging
-                                "1" // TODO: get this value from config
+                                &default_partner_id
                             }
                         }
                     }
-                    None => "1", // TODO: get this value from config
+                    None => &default_partner_id,
                 };
                 let partner_id = partner_id.to_string();
 
@@ -145,7 +152,10 @@ impl Plugin for SubgraphTiering {
 // register_plugin takes a group name, and a plugin name.
 register_plugin!("starstruck", "subgraph_tier", SubgraphTiering);
 
-fn cache_control(request: router::Request) -> ControlFlow<router::Response, router::Request> {
+fn cache_control(
+    request: router::Request,
+    cache_header_key: &String,
+) -> ControlFlow<router::Response, router::Request> {
     // We are going to do a lot of similar checking so let's define a local function
     // to help reduce repetition
     fn cancel_message(
@@ -167,7 +177,7 @@ fn cache_control(request: router::Request) -> ControlFlow<router::Response, rout
         ControlFlow::Break(response)
     }
 
-    let clear_cache_header = request.router_request.headers().get("CLEAR-CACHE"); // TODO: add the key to some constant
+    let clear_cache_header = request.router_request.headers().get(cache_header_key);
     let clear_cache = match clear_cache_header {
         Some(_) => true,
         None => false,
@@ -176,8 +186,10 @@ fn cache_control(request: router::Request) -> ControlFlow<router::Response, rout
     if !clear_cache {
         return ControlFlow::Continue(request);
     } else {
-        let mut cache = CONFIG_CACHE.lock().unwrap();
-        cache.cache_clear();
+        {
+            let mut cache = CONFIG_CACHE.lock().unwrap();
+            cache.cache_clear();
+        }
 
         cancel_message(
             request.context,

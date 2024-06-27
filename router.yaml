@@ -1,7 +1,7 @@
 plugins:
   starstruck.subgraph_tier:
     message: "starting subgraph tiering"
-    service:
+    services:
       - name: webui
         default_uri: https://space-qa6-app-platform.sprinklr.com/ui/graphql
       - name: accounts
@@ -12,6 +12,10 @@ plugins:
         default_uri: https://products.demo.starstuff.dev/
       - name: reviews
         default_uri: https://products.demo.starstuff.dev/
+
+    default_partner_id: "1"
+    cache_header_key: CLEAR-CACHE
+
 
 headers:
   all:
