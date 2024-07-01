@@ -26,7 +26,7 @@ enum join__Graph {
   ACCOUNTS @join__graph(name: "accounts", url: "https://accounts.demo.starstuff.dev/")
   INVENTORY @join__graph(name: "inventory", url: "https://inventory.demo.starstuff.dev/")
   PRODUCTS @join__graph(name: "products", url: "https://products.demo.starstuff.dev/")
-  REVIEWS @join__graph(name: "reviews", url: "https://products.demo.starstuff.dev/")
+  REVIEWS @join__graph(name: "reviews", url: "https://reviews.demo.starstuff.dev/")
 }
 
 scalar link__Import

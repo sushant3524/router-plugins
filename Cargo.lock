@@ -5902,7 +5902,6 @@ dependencies = [
  "apollo-router",
  "async-trait",
  "cached",
- "futures",
  "http 0.2.12",
  "mongodb",
  "once_cell",

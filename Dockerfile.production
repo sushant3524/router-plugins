@@ -28,6 +28,7 @@ RUN mkdir -p /dist/config && \
 
 # Copy configuration for docker image
 COPY router.yaml /dist/config.yaml
+COPY supergraph-schema.graphql /dist/schema.graphql
 
 FROM debian:bookworm-slim
 
@@ -45,11 +46,12 @@ COPY --from=build --chown=root:root /dist /dist
 WORKDIR /dist
 
 ENV APOLLO_ROUTER_CONFIG_PATH="/dist/config.yaml"
+ENV APOLLO_ROUTER_SUPERGRAPH_PATH="/dist/schema.graphql"
 
 # Make sure we can run the router
 RUN chmod 755 /dist/router
 
-USER router
+USER root
 
 # Default executable is the router
-ENTRYPOINT ["/dist/router"]
+ENTRYPOINT ["/dist/router", "--hr"]

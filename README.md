@@ -6,7 +6,7 @@ This generated project is set up to create a custom Apollo Router binary that in
 > Read [our licensing page](https://www.apollographql.com/docs/resources/elastic-license-v2-faq/) for more details.
 
 ## Included Plugins
-- Subgraph tiering support 
+- Subgraph tiering support
 
 ## Understand what a macro does
 For example to understand `cached` macro was doing
@@ -15,6 +15,19 @@ rustup default nightly
 cargo rustc --profile=check -- -Zunpretty=expanded > file.rs
 ```
 and check the code output in `file.rs`
+
+## Run the Dockerfile
+### Linux
+```bash
+docker build --tag router -f Dockerfile.dev .
+docker run --network host --env-file .env.example router
+```
+### Mac
+This does not work right now
+
+### Windows
+Not tested
+
 
 # Compile the router
 
@@ -41,7 +54,7 @@ Your release binary is now located in `target/release/router`
 2. Run the Apollo Router
 
    During development it is convenient to use `cargo run` to run the Apollo Router as it will
-   ```bash 
+   ```bash
    cargo run -- --hot-reload --config router.yaml --supergraph supergraph-schema.graphql
    ```
 

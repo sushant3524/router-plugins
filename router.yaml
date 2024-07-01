@@ -11,7 +11,7 @@ plugins:
       - name: products
         default_uri: https://products.demo.starstuff.dev/
       - name: reviews
-        default_uri: https://products.demo.starstuff.dev/
+        default_uri: https://reviews.demo.starstuff.dev/
 
     default_partner_id: "1"
     cache_header_key: CLEAR-CACHE
