@@ -55,7 +55,7 @@ Your release binary is now located in `target/release/router`
 
    During development it is convenient to use `cargo run` to run the Apollo Router as it will
    ```bash
-   cargo run -- --hot-reload --config router.yaml --supergraph supergraph-schema.graphql
+   cargo run --bin router -- --hot-reload --config router.yaml --supergraph supergraph-schema.graphql
    ```
 
 > If you are using managed federation you can set APOLLO_KEY and APOLLO_GRAPH_REF environment variables instead of specifying the supergraph as a file.

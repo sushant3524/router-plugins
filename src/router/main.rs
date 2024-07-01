@@ -1,4 +1,4 @@
-mod plugins;
+pub(crate) mod plugins;
 
 use anyhow::Result;
 
