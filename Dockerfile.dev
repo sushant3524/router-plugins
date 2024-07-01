@@ -24,7 +24,9 @@ RUN cargo build --profile dev
 # Make directories for config and schema
 RUN mkdir -p /dist/config && \
     mkdir /dist/schema && \
-    mv target/debug/router /dist
+    mv target/debug/router /dist && \
+    mv target/debug/helper /dist && \
+    mv start.sh /dist
 
 # Copy configuration for docker image
 COPY router.yaml /dist/config.yaml
@@ -50,8 +52,10 @@ ENV APOLLO_ROUTER_SUPERGRAPH_PATH="/dist/schema.graphql"
 
 # Make sure we can run the router
 RUN chmod 755 /dist/router
+RUN chmod 755 /dist/helper
+RUN chmod 755 /dist/start.sh
 
 USER root
 
 # Default executable is the router
-ENTRYPOINT ["/dist/router", "--hr"]
+ENTRYPOINT ["/dist/start.sh"]
