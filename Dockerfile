@@ -1,6 +1,6 @@
 # Use the rust build image from docker as our base
 # renovate-automation: rustc version
-FROM rust:1.76.0 as build
+FROM rust:latest AS build
 
 # Set our working directory for the build
 WORKDIR /usr/src/router
@@ -9,7 +9,8 @@ WORKDIR /usr/src/router
 RUN apt-get update
 RUN apt-get -y install \
     npm \
-    protobuf-compiler
+    protobuf-compiler \
+    cmake
 
 # Add rustfmt since build requires it
 RUN rustup component add rustfmt
@@ -28,11 +29,11 @@ RUN mkdir -p /dist/config && \
 # Copy configuration for docker image
 COPY router.yaml /dist/config.yaml
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update
 RUN apt-get -y install \
-    ca-certificates 
+    ca-certificates
 
 # Set labels for our image
 LABEL org.opencontainers.image.authors="Apollo Graph, Inc. https://github.com/apollographql/router"
