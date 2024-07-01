@@ -3,6 +3,7 @@ schema
   @link(url: "https://specs.apollo.dev/join/v0.3", for: EXECUTION)
 {
   query: Query
+  mutation: Mutation
 }
 
 directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
@@ -19,20 +20,13 @@ directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on
 
 directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
 
-type Address
-  @join__type(graph: USER)
-{
-  city: String
-  country: String
-  id: Long
-}
-
 scalar join__FieldSet
 
 enum join__Graph {
-  PRODUCT @join__graph(name: "product", url: "http://localhost:5001/graphql")
-  REVIEW @join__graph(name: "review", url: "http://localhost:5003/graphql")
-  USER @join__graph(name: "user", url: "http://localhost:5002/graphql")
+  ACCOUNTS @join__graph(name: "accounts", url: "https://accounts.demo.starstuff.dev/")
+  INVENTORY @join__graph(name: "inventory", url: "https://inventory.demo.starstuff.dev/")
+  PRODUCTS @join__graph(name: "products", url: "https://products.demo.starstuff.dev/")
+  REVIEWS @join__graph(name: "reviews", url: "https://products.demo.starstuff.dev/")
 }
 
 scalar link__Import
@@ -49,58 +43,56 @@ enum link__Purpose {
   EXECUTION
 }
 
-"""A 64-bit signed integer"""
-scalar Long
-  @join__type(graph: USER)
-
-type Product
-  @join__type(graph: PRODUCT, key: "upc")
-  @join__type(graph: REVIEW, key: "upc", extension: true)
-  @join__type(graph: USER, key: "upc", extension: true)
+type Mutation
+  @join__type(graph: PRODUCTS)
+  @join__type(graph: REVIEWS)
 {
-  name: String @join__field(graph: PRODUCT)
-  price: Int @join__field(graph: PRODUCT)
-  upc: String
-  reviews: [Review] @join__field(graph: REVIEW)
-  endorsedBy: [User] @join__field(graph: USER)
+  createProduct(upc: ID!, name: String): Product @join__field(graph: PRODUCTS)
+  createReview(upc: ID!, id: ID!, body: String): Review @join__field(graph: REVIEWS)
 }
 
-"""Query root"""
-type Query
-  @join__type(graph: PRODUCT)
-  @join__type(graph: REVIEW)
-  @join__type(graph: USER)
+type Product
+  @join__type(graph: ACCOUNTS, key: "upc", extension: true)
+  @join__type(graph: INVENTORY, key: "upc")
+  @join__type(graph: PRODUCTS, key: "upc")
+  @join__type(graph: REVIEWS, key: "upc")
 {
-  getProductByID(id: String): Product @join__field(graph: PRODUCT)
-  getProducts: [Product] @join__field(graph: PRODUCT)
-  getProductsInStock: [Product] @join__field(graph: PRODUCT)
-  trivia(id: String): Review @join__field(graph: REVIEW)
-  getUserById(id: String): User @join__field(graph: USER)
+  upc: String!
+  weight: Int @join__field(graph: INVENTORY, external: true) @join__field(graph: PRODUCTS)
+  price: Int @join__field(graph: INVENTORY, external: true) @join__field(graph: PRODUCTS)
+  inStock: Boolean @join__field(graph: INVENTORY)
+  shippingEstimate: Int @join__field(graph: INVENTORY, requires: "price weight")
+  name: String @join__field(graph: PRODUCTS)
+  reviews: [Review] @join__field(graph: REVIEWS)
+  reviewsForAuthor(authorID: ID!): [Review] @join__field(graph: REVIEWS)
+}
+
+type Query
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: INVENTORY)
+  @join__type(graph: PRODUCTS)
+  @join__type(graph: REVIEWS)
+{
+  me: User @join__field(graph: ACCOUNTS)
+  recommendedProducts: [Product] @join__field(graph: ACCOUNTS)
+  topProducts(first: Int = 5): [Product] @join__field(graph: PRODUCTS)
 }
 
 type Review
-  @join__type(graph: REVIEW, key: "id")
+  @join__type(graph: REVIEWS, key: "id")
 {
-  author: User @join__field(graph: REVIEW, provides: "username")
+  id: ID!
   body: String
-  id: String
+  author: User @join__field(graph: REVIEWS, provides: "username")
   product: Product
 }
 
-"""Use SPQR's SchemaPrinter to remove this from SDL"""
-scalar UNREPRESENTABLE
-  @join__type(graph: PRODUCT)
-  @join__type(graph: REVIEW)
-  @join__type(graph: USER)
-
 type User
-  @join__type(graph: REVIEW, key: "id", extension: true)
-  @join__type(graph: USER, key: "id")
+  @join__type(graph: ACCOUNTS, key: "id")
+  @join__type(graph: REVIEWS, key: "id")
 {
-  id: String
-  reviews: [Review] @join__field(graph: REVIEW)
-  username: String @join__field(graph: REVIEW, external: true) @join__field(graph: USER)
-  address: Address @join__field(graph: USER)
-  name: String @join__field(graph: USER)
-  product: Product @join__field(graph: USER)
+  id: ID!
+  name: String @join__field(graph: ACCOUNTS)
+  username: String @join__field(graph: ACCOUNTS) @join__field(graph: REVIEWS, external: true)
+  reviews: [Review] @join__field(graph: REVIEWS)
 }
