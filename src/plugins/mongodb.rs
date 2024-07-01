@@ -5,17 +5,18 @@ use mongodb::options::ClientOptions;
 use mongodb::sync::Client;
 use serde::Deserialize;
 
-pub static CONFIG_CACHE: once_cell::sync::Lazy<std::sync::Mutex<SizedCache<String, Config>>> =
-    once_cell::sync::Lazy::new(|| {
-        let cache_size = match std::env::var("DEFAULT_URI_CACHE_SIZE")
-            .expect("Missing URI_CACHE_SIZE environment variable")
-            .parse::<usize>()
-        {
-            Ok(value) => value,
-            Err(err) => panic!("Could not create cache because {err}"),
-        };
-        std::sync::Mutex::new(SizedCache::with_size(cache_size))
-    });
+pub static CONFIG_CACHE: once_cell::sync::Lazy<
+    std::sync::Mutex<SizedCache<String, Option<Config>>>,
+> = once_cell::sync::Lazy::new(|| {
+    let cache_size = match std::env::var("DEFAULT_URI_CACHE_SIZE")
+        .expect("Missing URI_CACHE_SIZE environment variable")
+        .parse::<usize>()
+    {
+        Ok(value) => value,
+        Err(err) => panic!("Could not create cache because {err}"),
+    };
+    std::sync::Mutex::new(SizedCache::with_size(cache_size))
+});
 
 static MONGO_CLIENT: once_cell::sync::Lazy<mongodb::sync::Client> =
     once_cell::sync::Lazy::new(|| {
@@ -64,22 +65,20 @@ pub fn get_cached_config(partner_id: String, service_name: String) -> Option<Con
 
     {
         let mut cache = CONFIG_CACHE.lock().unwrap();
-        if let Some(result) = cache.cache_get(&key) {
-            return Some(result.to_owned());
+        if let Some(config) = cache.cache_get(&key) {
+            return config.to_owned();
         }
     }
 
     match get_config_from_db(partner_id, service_name) {
-        Ok(result) => match result {
-            Some(conf) => {
-                {
-                    let mut cache = CONFIG_CACHE.lock().unwrap();
-                    cache.cache_set(key, conf.clone());
-                }
-                Some(conf)
+        Ok(config) => {
+            {
+                let mut cache = CONFIG_CACHE.lock().unwrap();
+                cache.cache_set(key, config.to_owned());
             }
-            None => None,
-        },
+
+            config
+        }
         Err(error) => {
             println!("Error in Mongo: {}", error.to_string());
             None
