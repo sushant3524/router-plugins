@@ -19,9 +19,20 @@ and check the code output in `file.rs`
 ## Run the Dockerfile
 ### Linux
 ```bash
+# local
 docker build --tag router -f Dockerfile.dev .
 docker run --network host --env-file .env.example router
+
+# dev
+docker build --tag router -f Dockerfile.dev . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.dev router
+
+# prod
+docker build --tag router -f Dockerfile.prod . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.prod router
+
+# prebuilt
+docker build --tag router -f Dockerfile.prebuilt . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.dev router
 ```
+
 ### Mac
 This does not work right now
 
