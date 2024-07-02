@@ -8,6 +8,10 @@ This generated project is set up to create a custom Apollo Router binary that in
 ## Included Plugins
 - Subgraph tiering support
 
+## Included Helper
+- `POST` request to `http://0.0.0.0/9000/schema` with schema updates the schema
+- `POST` request to `http://0.0.0.0/9000/config` with config updates the config
+
 ## Understand what a macro does
 For example to understand `cached` macro was doing
 ```bash
@@ -24,10 +28,10 @@ docker build --tag router -f Dockerfile.dev .
 docker run --network host --env-file .env.example router
 
 # dev
-docker build --tag router -f Dockerfile.dev . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.dev router
+docker build --tag router -f Dockerfile.dev . && docker run -p 4000:4000 -p 8088:8088 -p 9000:9000 --env-file .env.dev router
 
 # prod
-docker build --tag router -f Dockerfile.prod . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.prod router
+docker build --tag router -f Dockerfile.prod . && docker run -p 4000:4000 -p 8088:8088 -p 9000:9000 --env-file .env.prod router
 
 # prebuilt
 docker build --tag router -f Dockerfile.prebuilt . && docker run -p 4000:4000 -p 8088:8088 --env-file .env.dev router

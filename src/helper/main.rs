@@ -26,9 +26,22 @@ async fn write_to_file(body: String, path: String) -> (bool, String) {
     return (true, "File updated successfully".to_string());
 }
 
-async fn handle_post(body: String) -> impl Responder {
+async fn update_schema(body: String) -> impl Responder {
     match write_to_file(body, "/dist/schema.graphql".to_owned()).await {
-        (true, _) => HttpResponse::Ok().body("POST request processed successfully"),
+        (true, _) => {
+            HttpResponse::Ok().body("POST request processed successfully. Schema updated.")
+        }
+        (false, message) => {
+            return HttpResponse::InternalServerError().body(message);
+        }
+    }
+}
+
+async fn update_config(body: String) -> impl Responder {
+    match write_to_file(body, "/dist/config.yaml".to_owned()).await {
+        (true, _) => {
+            HttpResponse::Ok().body("POST request processed successfully. Config updated.")
+        }
         (false, message) => {
             return HttpResponse::InternalServerError().body(message);
         }
@@ -37,8 +50,12 @@ async fn handle_post(body: String) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().route("/schema", web::post().to(handle_post)))
-        .bind("0.0.0.0:9000")?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .route("/schema", web::post().to(update_schema))
+            .route("/config", web::post().to(update_config))
+    })
+    .bind("0.0.0.0:9000")?
+    .run()
+    .await
 }

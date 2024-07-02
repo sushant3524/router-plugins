@@ -52,9 +52,6 @@ COPY --from=build --chown=root:root /dist /dist
 
 WORKDIR /dist
 
-ENV APOLLO_ROUTER_CONFIG_PATH="/dist/config.yaml"
-ENV APOLLO_ROUTER_SUPERGRAPH_PATH="/dist/schema.graphql"
-
 # Make sure we can run the router
 RUN chmod 755 /dist/router
 RUN chmod 755 /dist/helper
