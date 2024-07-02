@@ -1,0 +1,7 @@
+FROM ghcr.io/apollographql/router:v1.49.1
+
+# Copy configuration and schema for docker image
+COPY router-prebuilt.yaml /dist/config.yaml
+COPY supergraph-schema.graphql /dist/schema.graphql
+
+ENTRYPOINT ["./router", "--hr"]

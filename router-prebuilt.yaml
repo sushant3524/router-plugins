@@ -1,0 +1,9 @@
+headers:
+  all:
+    request:
+      - propagate:
+          matching: ^.*
+
+health_check:
+  listen: 0.0.0.0:8088
+  enabled: true
