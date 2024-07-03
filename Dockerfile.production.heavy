@@ -41,7 +41,8 @@ FROM debian:bookworm-slim
 
 RUN apt-get update
 RUN apt-get -y install \
-    ca-certificates
+    ca-certificates \
+    procps net-tools curl vim nano htop lsof iputils-ping iputils-tracepath
 
 # Set labels for our image
 LABEL org.opencontainers.image.authors="Apollo Graph, Inc. https://github.com/apollographql/router"
