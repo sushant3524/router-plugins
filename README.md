@@ -9,8 +9,8 @@ This generated project is set up to create a custom Apollo Router binary that in
 - Subgraph tiering support
 
 ## Included Helper
-- `POST` request to `http://0.0.0.0/9000/schema` with schema updates the schema
-- `POST` request to `http://0.0.0.0/9000/config` with config updates the config
+- `POST` request to `http://0.0.0.0:9000/schema` with schema updates the schema
+- `POST` request to `http://0.0.0.0:9000/config` with config updates the config
 
 ## Understand what a macro does
 For example to understand `cached` macro was doing
