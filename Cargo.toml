@@ -21,7 +21,7 @@ path = "src/helper/main.rs"
 # Note if you update these dependencies then also update xtask/Cargo.toml
 anyhow = "1.0.58"
 actix-web = "4"
-apollo-router = "1.49.1"
+apollo-router = { git = "https://github.com/sushant3524/router.git", tag = "v1.49.1-1" }
 async-trait = "0.1.52"
 futures = "0.3.21"
 schemars = "0.8.10"
