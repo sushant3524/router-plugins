@@ -7,6 +7,7 @@ version = "0.1.0"
 [dependencies]
 # This dependency should stay in line with your router version
 
-apollo-router-scaffold = { git = "https://github.com/sushant3524/router.git", tag = "v1.49.1-1" }
+apollo-router-scaffold = { git = "https://github.com/sushant3524/router.git", branch = "router-ignore-validation" }
+
 anyhow = "1.0.58"
 clap = "4.0.32"

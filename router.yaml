@@ -1,11 +1,11 @@
 supergraph:
-  path: /graphql/*
+  path: /ui/graphql/*
 plugins:
   starstruck.subgraph_tier:
     message: "starting subgraph tiering"
     services:
       - name: webui
-        default_uri: https://space-qa6-care.sprinklr.com/ui/graphql
+        default_uri: https://qa6-webui-care-int.sprinklr.com/ui/graphql
       - name: voice
         default_uri: https://qa6-voice-tier1.sprinklr.com/graphql
       - name: process-engine

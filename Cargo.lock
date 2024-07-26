@@ -347,8 +347,7 @@ dependencies = [
 [[package]]
 name = "apollo-federation"
 version = "1.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f83c728cfb0291e1fb2c20b5012e0a62a9d7d9c8ca7bbbcea5408f4e811815c3"
+source = "git+https://github.com/sushant3524/router.git?branch=router-ignore-validation#d5b80e7283d50b6a8b2a6af51320b16f377f4f69"
 dependencies = [
  "apollo-compiler",
  "derive_more",
@@ -382,8 +381,7 @@ dependencies = [
 [[package]]
 name = "apollo-router"
 version = "1.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b269cfd512859066658044353289278572b00b05eef07417439ad7d9d28591c4"
+source = "git+https://github.com/sushant3524/router.git?branch=router-ignore-validation#d5b80e7283d50b6a8b2a6af51320b16f377f4f69"
 dependencies = [
  "access-json",
  "anyhow",
@@ -528,7 +526,7 @@ dependencies = [
 [[package]]
 name = "apollo-router-scaffold"
 version = "1.49.1"
-source = "git+https://github.com/sushant3524/router.git?tag=v1.49.1-1#e0f324f5a6b4972498f4fcb5398c127e3f21dcee"
+source = "git+https://github.com/sushant3524/router.git?branch=router-ignore-validation#f04aed19516a95caafa4364ca687ae786d16c9a6"
 dependencies = [
  "anyhow",
  "cargo-scaffold",
