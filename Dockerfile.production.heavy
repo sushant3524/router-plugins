@@ -32,11 +32,14 @@ RUN mkdir -p /dist/config && \
     mv target/release/router /dist && \
     mv target/release/helper /dist && \
     mv start.sh /dist
+RUN mkdir -p /dist/.config/rover && chmod -R 777 /dist/.config
 
 # Copy configuration and schema for docker image
 COPY router.yaml /dist/config.yaml
 COPY supergraph-schema.graphql /dist/schema.graphql
 COPY rover-config.yaml /dist/rover-config.yaml
+COPY voice.graphql /dist/voice.graphql
+COPY webui.graphql /dist/webui.graphql
 
 # Download and install Rover
 RUN curl -sSL https://raw.githubusercontent.com/apollographql/rover/v0.25.0/installers/binstall/scripts/nix/install.sh | sh
