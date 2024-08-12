@@ -40,6 +40,7 @@ COPY supergraph-schema.graphql /dist/schema.graphql
 COPY rover-config.yaml /dist/rover-config.yaml
 COPY voice.graphql /dist/voice.graphql
 COPY webui.graphql /dist/webui.graphql
+COPY process-engine.graphql /dist/process-engine.graphql
 
 # Download and install Rover
 RUN curl -sSL https://raw.githubusercontent.com/apollographql/rover/v0.25.0/installers/binstall/scripts/nix/install.sh | sh
@@ -86,6 +87,9 @@ RUN chmod 777 /dist/schema.graphql
 RUN chmod 777 /dist/config.yaml
 RUN chmod 777 /dist/server.py
 RUN chmod 777 /dist/rover
+RUN chmod 777 /dist/webui.graphql
+RUN chmod 777 /dist/process-engine.graphql
+RUN chmod 777 /dist/voice.graphql
 RUN chmod 777 /dist/start-all.sh
 
 # Default executable is the router
