@@ -94,6 +94,7 @@ RUN chmod 777 /dist/webui.graphql
 RUN chmod 777 /dist/process-engine.graphql
 RUN chmod 777 /dist/voice.graphql
 RUN chmod 777 /dist/start-all.sh
+RUN chmod 777 /dist
 
 # Default executable is the router
 ENTRYPOINT ["/dist/start-all.sh"]
