@@ -1,4 +1,4 @@
-federation_version: 2
+federation_version: =2.8.1
 subgraphs:
   process-engine:
     routing_url: https://qa6-process-engine-tier1.sprinklr.com/graphql/
@@ -8,3 +8,7 @@ subgraphs:
     routing_url: https://space-qa6-care.sprinklr.com/ui/graphql
     schema:
       file: ./webui.graphql
+  voice:
+    routing_url: https://qa6-voice-tier1.sprinklr.com/graphql/
+    schema:
+      file: ./voice.graphql

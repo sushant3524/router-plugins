@@ -32,7 +32,8 @@ RUN mkdir -p /dist/config && \
     mv target/release/router /dist && \
     mv target/release/helper /dist && \
     mv start.sh /dist
-RUN mkdir -p /dist/.config/rover && chmod -R 777 /dist/.config
+RUN mkdir -p /dist/.config/rover && chmod -R 777 /dist/.config && \
+    mkdir -p /dist/.rover/plugins && chmod -R 777 /dist/.rover
 
 # Copy configuration and schema for docker image
 COPY router.yaml /dist/config.yaml
@@ -60,6 +61,7 @@ RUN apt-get -y install \
     nano \
     htop \
     lsof \
+    xclip \
     iputils-ping \
     iputils-tracepath \
     python3 \
@@ -85,6 +87,7 @@ RUN chmod 777 /dist/helper
 RUN chmod 777 /dist/start.sh
 RUN chmod 777 /dist/schema.graphql
 RUN chmod 777 /dist/config.yaml
+RUN chmod 777 /dist/rover-config.yaml
 RUN chmod 777 /dist/server.py
 RUN chmod 777 /dist/rover
 RUN chmod 777 /dist/webui.graphql

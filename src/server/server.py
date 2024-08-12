@@ -36,7 +36,9 @@ def save_schema():
         with open(schema_file_path, 'w') as schema_file:
             schema_file.write(sub_schema)
 
-        return jsonify({'message': f'Schema saved to {schema_file_path}'}), 200
+        response = run_rover()
+        return jsonify(
+            {'message': f'Schema saved to {schema_file_path}', 'run_rover': f'Schema saved to {response}'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
