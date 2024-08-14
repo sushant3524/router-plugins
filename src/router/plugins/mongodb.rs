@@ -3,7 +3,8 @@ use cached::SizedCache;
 use mongodb::bson::doc;
 use mongodb::options::ClientOptions;
 use mongodb::sync::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use reqwest::Error;
 
 pub static CONFIG_CACHE: once_cell::sync::Lazy<
     std::sync::Mutex<SizedCache<String, Option<Config>>>,
@@ -38,22 +39,62 @@ pub struct Config {
     pub service_name: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ApiResponse {
+    r#type: String,
+    result: ApiResult,
+    #[serde(default)]
+    stackTrace: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum ApiResult {
+    Success { url: String },
+    Failure(String),
+}
+
 // Function to get the config from MongoDB
-fn get_config_from_db(
-    partner_id: String,
-    service_name: String,
+fn get_config_from_tier_configuration(
+    partnerId: String,
+    service: String,
 ) -> mongodb::error::Result<Option<Config>> {
-    let database = MONGO_CLIENT.database("partner");
-    let collection = database.collection::<Config>("config");
+    tracing::info!("[TEST-SUSH] service {:?}", service);
+    let api_url = format!(
+        "http://qa6-restricted-tier2.sprinklr.com/restricted/v1/care/feature/get-url-for-service/{}/{}",
+        partnerId, service
+    );
 
-    // Query the database for the config document
-    // Assuming there's only one config document
-    let filter = doc! {
-        "partner_id": partner_id,
-        "service_name": service_name
-    };
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&api_url)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .send()?
+        .json::<ApiResponse>()?;
 
-    collection.find_one(filter, None)
+    match response.r#type.as_str() {
+        "SUCCESS" => {
+            if let ApiResult::Success { url } = response.result {
+                let config = Config {
+                    partner_id,
+                    service_uri: url,
+                    service_name,
+                };
+                Ok(Some(config))
+            } else {
+                Ok(None)
+            }
+        }
+        "FAILED" => {
+            println!("Failed to get URL: {:?}", response.result);
+            Ok(None)
+        }
+        _ => {
+            println!("Unexpected response: {:?}", response);
+            Ok(None)
+        }
+    }
 }
 
 // Note that this function does not cache if the config is not found
@@ -70,7 +111,7 @@ pub fn get_cached_config(partner_id: String, service_name: String) -> Option<Con
         }
     }
 
-    match get_config_from_db(partner_id, service_name) {
+    match get_config_from_tier_configuration(partner_id, service_name) {
         Ok(config) => {
             {
                 let mut cache = CONFIG_CACHE.lock().unwrap();
