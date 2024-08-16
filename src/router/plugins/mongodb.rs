@@ -1,5 +1,6 @@
 use cached::Cached;
 use cached::SizedCache;
+use futures::TryFutureExt;
 use mongodb::bson::doc;
 use mongodb::options::ClientOptions;
 use mongodb::sync::Client;
@@ -66,32 +67,42 @@ fn get_config_from_tier_configuration(
     );
 
     let client = reqwest::Client::new();
-    let response = client
+    match client
         .post(&api_url)
         .header("Content-Type", "application/json")
         .header("Accept", "application/json")
-        .send()?
-        .json::<ApiResponse>()?;
-
-    match response.r#type.as_str() {
-        "SUCCESS" => {
-            if let ApiResult::Success { url } = response.result {
-                let config = Config {
-                    partner_id,
-                    service_uri: url,
-                    service_name,
-                };
-                Ok(Some(config))
-            } else {
+        .send()
+        .and_then(|res| res.json::<ApiResponse>()) // Deserialize the response
+    {
+        Ok(response) => match response.r#type.as_str() {
+            "SUCCESS" => {
+                tracing::info!("[TEST-SUSH] success service {:?}", service);
+                if let ApiResult::Success { url } = response.result {
+                    let config = Config {
+                        partner_id,
+                        service_uri: url,
+                        service_name: service,
+                    };
+                    Ok(Some(config))
+                } else {
+                    Ok(None)
+                }
+            }
+            "FAILED" => {
+                tracing::info!("[TEST-SUSH] failed service {:?}", service);
+                println!("Failed to get URL: {:?}", response.result);
                 Ok(None)
             }
-        }
-        "FAILED" => {
-            println!("Failed to get URL: {:?}", response.result);
-            Ok(None)
-        }
-        _ => {
-            println!("Unexpected response: {:?}", response);
+            _ => {
+                tracing::info!("[TEST-SUSH] _ service {:?}", service);
+                println!("Unexpected response: {:?}", response);
+                Ok(None)
+            }
+        },
+        Err(e) => {
+            tracing::info!("[TEST-SUSH] error service {:?}", e);
+            // Handle any kind of error and return `Ok(None)`
+            println!("Error occurred during API call: {:?}", e);
             Ok(None)
         }
     }
