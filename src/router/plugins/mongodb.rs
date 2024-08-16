@@ -1,9 +1,7 @@
 use cached::Cached;
 use cached::SizedCache;
-use futures::TryFutureExt;
-use mongodb::bson::doc;
 use mongodb::options::ClientOptions;
-use mongodb::sync::Client;
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use reqwest::Error;
 
@@ -20,18 +18,6 @@ pub static CONFIG_CACHE: once_cell::sync::Lazy<
     std::sync::Mutex::new(SizedCache::with_size(cache_size))
 });
 
-static MONGO_CLIENT: once_cell::sync::Lazy<mongodb::sync::Client> =
-    once_cell::sync::Lazy::new(|| {
-        let mongo_url =
-            std::env::var("MONGODB_URI").expect("Missing MONGO_URL environment variable");
-        let client_options = ClientOptions::parse(&mongo_url)
-            .expect("Client options provided could not be parsed properly");
-        match Client::with_options(client_options) {
-            Ok(client) => client,
-            Err(err) => panic!("Could not create a Mongo Client as {err}"),
-        }
-    });
-
 // Define a struct to hold your config data
 #[derive(Deserialize, Clone)]
 pub struct Config {
@@ -40,72 +26,77 @@ pub struct Config {
     pub service_name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ApiResponse {
     r#type: String,
-    result: ApiResult,
-    #[serde(default)]
-    stackTrace: Option<String>,
+    result: Option<ResultField>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum ApiResult {
-    Success { url: String },
-    Failure(String),
+#[derive(Deserialize, Debug)]
+struct ResultField {
+    url: Option<String>,
 }
 
 // Function to get the config from MongoDB
 fn get_config_from_tier_configuration(
     partnerId: String,
     service: String,
-) -> mongodb::error::Result<Option<Config>> {
+) -> Option<Config> {
     tracing::info!("[TEST-SUSH] service {:?}", service);
     let api_url = format!(
         "http://qa6-restricted-tier2.sprinklr.com/restricted/v1/care/feature/get-url-for-service/{}/{}",
         partnerId, service
     );
 
-    let client = reqwest::Client::new();
-    match client
+    let response = Client::new()
         .post(&api_url)
         .header("Content-Type", "application/json")
         .header("Accept", "application/json")
-        .send()
-        .and_then(|res| res.json::<ApiResponse>()) // Deserialize the response
-    {
-        Ok(response) => match response.r#type.as_str() {
-            "SUCCESS" => {
-                tracing::info!("[TEST-SUSH] success service {:?}", service);
-                if let ApiResult::Success { url } = response.result {
-                    let config = Config {
-                        partner_id,
-                        service_uri: url,
-                        service_name: service,
-                    };
-                    Ok(Some(config))
-                } else {
-                    Ok(None)
+        .send();
+
+    // Handle the response
+    match response {
+        Ok(resp) => {
+            tracing::info!("[TEST-SUSH] service ok {:?}", service);
+            if resp.status().is_success() {
+                let api_response: Result<ApiResponse, Error> = resp.json();
+                tracing::info!("[TEST-SUSH] service success {:?}", service);
+                match api_response {
+                    Ok(data) => {
+                        tracing::info!("[TEST-SUSH] service response ok {:?}", service);
+                        // Check if the response type is "SUCCESS" and return the Config if URL exists
+                        if data.r#type == "SUCCESS" {
+                            tracing::info!("[TEST-SUSH] service response ok sucess {:?}", service);
+                            if let Some(result_field) = data.result {
+                                tracing::info!("[TEST-SUSH] service response ok success result_field {:?}", result_field);
+                                if let Some(service_uri) = result_field.url {
+                                    tracing::info!("[TEST-SUSH] service response ok success service_uri {:?}", service_uri);
+                                    return Some(Config {
+                                        partner_id: partnerId,
+                                        service_uri,
+                                        service_name: service,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        // Handle JSON deserialization error
+                        tracing::info!("[TEST-SUSH] Handle JSON deserialization error {:?}", error);
+                        return None;
+                    }
                 }
             }
-            "FAILED" => {
-                tracing::info!("[TEST-SUSH] failed service {:?}", service);
-                println!("Failed to get URL: {:?}", response.result);
-                Ok(None)
-            }
-            _ => {
-                tracing::info!("[TEST-SUSH] _ service {:?}", service);
-                println!("Unexpected response: {:?}", response);
-                Ok(None)
-            }
-        },
-        Err(e) => {
-            tracing::info!("[TEST-SUSH] error service {:?}", e);
-            // Handle any kind of error and return `Ok(None)`
-            println!("Error occurred during API call: {:?}", e);
-            Ok(None)
+        }
+        Err(err) => {
+            // Handle HTTP request error
+            tracing::info!("[TEST-SUSH] Handle HTTP request error {:?}", err);
+            return None;
         }
     }
+    tracing::info!("[TEST-SUSH] nothing matters");
+    // Return None if the API call fails or response type is "FAILED"
+    None
 }
 
 // Note that this function does not cache if the config is not found
@@ -123,16 +114,16 @@ pub fn get_cached_config(partner_id: String, service_name: String) -> Option<Con
     }
 
     match get_config_from_tier_configuration(partner_id, service_name) {
-        Ok(config) => {
+        Some(config) => {
             {
                 let mut cache = CONFIG_CACHE.lock().unwrap();
-                cache.cache_set(key, config.to_owned());
+                cache.cache_set(key, Option::from(config.to_owned()));
             }
 
-            config
+            Option::from(config)
         }
-        Err(error) => {
-            println!("Error in Mongo: {}", error.to_string());
+        None => {
+            println!("None when trying to retrieve tier");
             None
         }
     }
